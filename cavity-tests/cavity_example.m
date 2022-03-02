@@ -13,17 +13,23 @@ ifgenerate = 1; % flag for generating the required data
 % a is a measure of the width
 % b is a measure of the closing angle
 
-binv = 2;
-a = 0.1;
+maxNumCompThreads(4);
+
+
+binv = 3;
+a = 0.3;
 b = pi/binv;
 
 % define k0 (starting frequncy, dk, spacing in frequency and 
 % number of frequencies (nk)
 
 k0 = 1;
-dk = 0.25;
+dkinv = 4;
+dk = 1.0/dkinv;
 %nk = 117;
-nk = 17;
+
+khmax = 5;
+nk = (khmax-1)*dkinv+1;
 
 
 % setting incident waves and receptors
@@ -54,42 +60,19 @@ bc.invtype = 'o';
 optim_opts = [];
 opts = [];
 opts.verbose=true;
-optim_opts.optim_type = 'gn';
+optim_opts.optim_type = 'min(gn,sd)';
 optim_opts.filter_type = 'gauss-conv';
 opts.store_src_info = true;
 optim_opts.eps_curv = 1e-2;
+optim_opts.maxit = 200;
+opts.use_lscaled_modes = true;
+optim_opts.n_curv_min = 30;
 
 
 % Data and solution directories
-dir_data = '../data/';
-dir_sol = '../sol/';
-dir_diary = '../diary/';
-
-
-if(dom_type == 1)
-    nc = 1;
-    coefs = zeros(2*nc+1,1);
-    coefs(1) = 1;
-end
-if(dom_type == 2)
-    nc = 3;
-    coefs = zeros(2*nc + 1,1);
-    coefs(nc+1) = 0.3;
-    coefs(1) = 1.0;
-end
-if(dom_type == 3)
-    nc = 8; 
-    coefs = zeros(2*nc+1,1);
-    coefs(1) = 1.0;
-    coefs(4) = 0.2;
-    coefs(5) = 0.02;
-    coefs(7) = 0.1;
-    coefs(9) = 0.1;
-    coefs = 0.9*coefs;   
-end
-
-
-
+dir_data = '../cavity-data/';
+dir_sol = '../cavity-sol/';
+dir_diary = '../cavity-diary/';
 
 
 fname = [dir_data 'cavity_ik' num2str(k0) '_nk' int2str(nk) '_dk' ...
@@ -103,14 +86,14 @@ fname_sol = [dir_sol 'cavity_ik' num2str(k0) '_nk' int2str(nk) '_dk' ...
      int2str(inc_type) ...
      '_noise' int2str(noise_type) 'noise_lvl' num2str(noise_lvl) ... 
      '_data_' bc.type '_optimtype_' optim_opts.optim_type '_filtertype_' ...
-     optim_opts.filter_type '.mat'];
+     optim_opts.filter_type '_lscaled.mat'];
 
 fname_diary = [dir_diary 'cavity_ik' num2str(k0) '_nk' int2str(nk) '_dk' ...
      num2str(dk) '_a' num2str(a) '_binv' num2str(binv) '_inctype' ...
      int2str(inc_type) ...
      '_noise' int2str(noise_type) 'noise_lvl' num2str(noise_lvl) ... 
      '_data_' bc.type '_optimtype_' optim_opts.optim_type '_filtertype_' ...
-     optim_opts.filter_type '.mat'];
+     optim_opts.filter_type '_lscaled.mat'];
 
 diary(fname_diary);
  
@@ -125,7 +108,6 @@ opts.src_in = src0;
 opts.verbose=true;
 
 % Set of frequencies (k_{i})
-dk = 0.25;
 kh = 1:dk:(1+(nk-1)*dk);
 
 
@@ -211,7 +193,7 @@ end
                           optim_opts,opts);
 
 diary off
-save(fname_sol,'inv_data_all','src_info_out');                      
+save(fname_sol,'inv_data_all','src_info_out','-v7.3');                      
                       
 
 
