@@ -13,8 +13,6 @@ ifgenerate = 1; % flag for generating the required data
 % a is a measure of the width
 % b is a measure of the closing angle
 
-maxNumCompThreads(4);
-
 
 binv = 3;
 a = 0.3;
