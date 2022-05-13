@@ -13,21 +13,17 @@ ifgenerate = 1; % flag for generating the required data
 % a is a measure of the width
 % b is a measure of the closing angle
 
-
-binv = 12;
-a = 0.1;
+binv = 2;
+a = 0.3;
 b = pi/binv;
 
 % define k0 (starting frequncy, dk, spacing in frequency and 
 % number of frequencies (nk)
 
 k0 = 1;
-dkinv = 4;
-dk = 1.0/dkinv;
+dk = 0.25;
 %nk = 117;
-
-khmax = 50;
-nk = (khmax-1)*dkinv+1;
+nk = 17;
 
 
 % setting incident waves and receptors
@@ -35,9 +31,8 @@ nk = (khmax-1)*dkinv+1;
 % inc_type = 2, 50 inc directions with 200 receptors
 % inc_type = 3, 100 inc directions with 200 receptors
 % inc_type = 4  2*k incident directions with 8*k receptors
-% inc_type = 5, 10*k incident directions with 10*k receptors
 
-inc_type = 5;
+inc_type = 1;
 
 
 % choice of noise levels
@@ -62,22 +57,39 @@ opts.verbose=true;
 optim_opts.optim_type = 'gn';
 optim_opts.filter_type = 'gauss-conv';
 opts.store_src_info = true;
-optim_opts.maxit = 100;
-opts.use_lscaled_modes = true;
-optim_opts.eps_upd = 1e-3;
-
-ifcons = 1;
-if(ifcons)
-    optim_opts.eps_curv = 1e-2;
-end
-
-optim_opts.n_curv_min = 20;
+optim_opts.eps_curv = 1e-2;
 
 
 % Data and solution directories
 dir_data = '~/ceph/rla-monograph-tests/cavity-data/';
 dir_sol = '~/ceph/rla-monograph-tests/cavity-sol/';
 dir_diary = '~/ceph/rla-monograph-tests/cavity-diary/';
+
+
+if(dom_type == 1)
+    nc = 1;
+    coefs = zeros(2*nc+1,1);
+    coefs(1) = 1;
+end
+if(dom_type == 2)
+    nc = 3;
+    coefs = zeros(2*nc + 1,1);
+    coefs(nc+1) = 0.3;
+    coefs(1) = 1.0;
+end
+if(dom_type == 3)
+    nc = 8; 
+    coefs = zeros(2*nc+1,1);
+    coefs(1) = 1.0;
+    coefs(4) = 0.2;
+    coefs(5) = 0.02;
+    coefs(7) = 0.1;
+    coefs(9) = 0.1;
+    coefs = 0.9*coefs;   
+end
+
+
+
 
 
 fname = [dir_data 'cavity_ik' num2str(k0) '_nk' int2str(nk) '_dk' ...
@@ -91,18 +103,14 @@ fname_sol = [dir_sol 'cavity_ik' num2str(k0) '_nk' int2str(nk) '_dk' ...
      int2str(inc_type) ...
      '_noise' int2str(noise_type) 'noise_lvl' num2str(noise_lvl) ... 
      '_data_' bc.type '_optimtype_' optim_opts.optim_type '_filtertype_' ...
-     optim_opts.filter_type '_ifcons' int2str(ifcons) '_ncurvmin' ...
-     int2str(optim_opts.n_curv_min) '_epscurv' num2str(optim_opts.eps_curv) ... 
-     '_lscaled.mat'];
+     optim_opts.filter_type '.mat'];
 
 fname_diary = [dir_diary 'cavity_ik' num2str(k0) '_nk' int2str(nk) '_dk' ...
      num2str(dk) '_a' num2str(a) '_binv' num2str(binv) '_inctype' ...
      int2str(inc_type) ...
      '_noise' int2str(noise_type) 'noise_lvl' num2str(noise_lvl) ... 
      '_data_' bc.type '_optimtype_' optim_opts.optim_type '_filtertype_' ...
-     optim_opts.filter_type '_ifcons' int2str(ifcons) '_ncurvmin' ...
-     int2str(optim_opts.n_curv_min) '_epscurv' num2str(optim_opts.eps_curv) ...
-     '_lscaled.mat'];
+     optim_opts.filter_type '.mat'];
 
 diary(fname_diary);
  
@@ -117,6 +125,7 @@ opts.src_in = src0;
 opts.verbose=true;
 
 % Set of frequencies (k_{i})
+dk = 0.25;
 kh = 1:dk:(1+(nk-1)*dk);
 
 
@@ -148,11 +157,6 @@ if (ifgenerate)
         if(inc_type == 4)
             n_dir = ceil(2*kh(ik));
             n_tgt = ceil(8*kh(ik));
-        end
-        
-        if(inc_type == 5)
-            n_dir = ceil(10*kh(ik));
-            n_tgt = ceil(10*kh(ik));
         end
 
         % set target locations
@@ -194,9 +198,7 @@ if (ifgenerate)
     end
 
 
-    save(fname,'u_meas','-append','-v7.3');
-    return
-    
+    save(fname,'u_meas','-append');
 else
     S = load(fname);
     u_meas = S.u_meas;
@@ -205,11 +207,11 @@ end
 
 
 % start inverse problem
-tic, [inv_data_all,src_info_out] = rla.rla_inverse_solver(u_meas,bc,...
-                          optim_opts,opts); toc;
+[inv_data_all,src_info_out] = rla.rla_inverse_solver(u_meas,bc,...
+                          optim_opts,opts);
 
 diary off
-save(fname_sol,'inv_data_all','src_info_out','-v7.3');                      
+save(fname_sol,'inv_data_all','src_info_out');                      
                       
 
 

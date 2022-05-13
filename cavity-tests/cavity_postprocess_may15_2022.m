@@ -27,23 +27,27 @@ bc.type = 'Dirichlet';
 bc.invtype = 'o';
 
 ifcons = 1;
-a = [0.2 0.3];
-b = [2 3];
-optimtype = ["gn" "sd" "min(gn,sd)" "sd-gn" "sd-min(gn,sd)"];
-filtertype = ["gauss-conv" "step-length"];
-eps_curv = [0.01 0.1];
+a = [0.1 0.2 0.3];
+b = [2 3 6 12];
+optimtype = ["sd" "sd-gn"];
+filtertype = ["gauss-conv"];
+inc_type = [3 4 5];
+eps_curv = [0.1];
 ncurvmin = [0 20];
-[ff,ee,dd,cc,bb,aa] = ndgrid(ncurvmin,eps_curv,optimtype,filtertype,b,a);
+[gg,ff,ee,dd,cc,bb,aa] = ndgrid(inc_type,ncurvmin,eps_curv,optimtype,filtertype,b,a);
 aa = aa(:);
 bb = bb(:);
 cc = cc(:);
 dd = dd(:);
 ee = ee(:);
 ff = ff(:);
+gg = gg(:);
 
 ncases = length(aa);
 
-icases = [1:20 41:60 81:100 121:140]
+
+icases = [3 6 15 18 27 30 39 42];
+
 icase_start = 44;
 icase_end = 56;
 
@@ -86,6 +90,7 @@ for iii=1:nn
 
     optim_opts.n_curv_min = ff(icase);
     optim_opts.sd_iter = 30;
+    inc_type = gg(icase);
 
 
     % Data and solution directories
@@ -105,6 +110,15 @@ for iii=1:nn
      optim_opts.filter_type '_ifcons' int2str(ifcons) '_ncurvmin' ...
      int2str(optim_opts.n_curv_min) '_epscurv' num2str(optim_opts.eps_curv) ... 
      '_lscaled.mat'];
+ 
+     fname_sol2 = [dir_sol 'cavity_residue_ik' num2str(k0) '_nk' int2str(nk) '_dk' ...
+     num2str(dk) '_a' num2str(a) '_binv' num2str(binv) '_inctype' ...
+     int2str(inc_type) ...
+     '_noise' int2str(noise_type) 'noise_lvl' num2str(noise_lvl) ... 
+     '_data_' bc.type '_optimtype_' optim_opts.optim_type '_filtertype_' ...
+     optim_opts.filter_type '_ifcons' int2str(ifcons) '_ncurvmin' ...
+     int2str(optim_opts.n_curv_min) '_epscurv' num2str(optim_opts.eps_curv) ... 
+     '_lscaled.mat'];
 
     fname_diary = [dir_diary 'cavity_ik' num2str(k0) '_nk' int2str(nk) '_dk' ...
      num2str(dk) '_a' num2str(a) '_binv' num2str(binv) '_inctype' ...
@@ -114,20 +128,17 @@ for iii=1:nn
      optim_opts.filter_type '_ifcons' int2str(ifcons) '_ncurvmin' ...
      int2str(optim_opts.n_curv_min) '_epscurv' num2str(optim_opts.eps_curv) ...
      '_lscaled.mat'];
-
     % load(fname)
     try
-      A = load(fname_sol);
+      A = load(fname_sol2);
     catch
       continue
     end
-%    rla.post_process(A.inv_data_all,fname)
-    inv_tmp = cell2mat(A.inv_data_all);
     
-    res_opt = vertcat(inv_tmp.res_opt);
-     res_opt_all(iii) = res_opt(end);
-     res_min_all(iii) = min(res_opt(:));
-    clear A inv_tmp res_opt
+ 
+     res_opt_all(iii) = A.res_opt(end);
+     res_min_all(iii) = min(A.res_opt(:));
+    
 end
 
 

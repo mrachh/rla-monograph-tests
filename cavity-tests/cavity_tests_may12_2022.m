@@ -1,11 +1,18 @@
+% This script generates the data for a star shaped domain, for a fixed
+% number of sensors and incident directions where data is available for all
+% sensors at each incident direction
 
 
-addpath ~/git/inverse-obstacle-scattering2d/src;
 
-dir_data = '~/ceph/rla-monograph-tests/cavity-data/';
-dir_sol = '~/ceph/rla-monograph-tests/cavity-sol/';
-dir_diary = '~/ceph/rla-monograph-tests/cavity-diary/';
+run ~/git/inverse-obstacle-scattering2d/startup.m
 
+warning('off');
+ifgenerate = 0; % flag for generating the required data
+
+maxNumCompThreads(6);
+
+% define k0 (starting frequncy, dk, spacing in frequency and 
+% number of frequencies (nk)
 
 k0 = 1;
 dkinv = 4;
@@ -15,8 +22,20 @@ dk = 1.0/dkinv;
 khmax = 50;
 nk = (khmax-1)*dkinv+1;
 
+
+% setting incident waves and receptors
+% inc_type = 1, 10 inc direction with 200 receptors
+% inc_type = 2, 50 inc directions with 200 receptors
+% inc_type = 3, 100 inc directions with 200 receptors
+% inc_type = 4  2*k incident directions with 8*k receptors
+
 inc_type = 3;
 
+
+% choice of noise levels
+% noise_type = 0; no noise
+% noise_type = 1; additive
+% noise_type = 2; multiplicative
 
 noise_type = 0;
 noise_lvl = 0.02;
@@ -25,6 +44,10 @@ noise_lvl = 0.02;
 bc = [];
 bc.type = 'Dirichlet';
 bc.invtype = 'o';
+
+dir_data = '~/ceph/rla-monograph-tests/cavity-data/';
+dir_sol = '~/ceph/rla-monograph-tests/cavity-sol/';
+dir_diary = '~/ceph/rla-monograph-tests/cavity-diary/';
 
 ifcons = 1;
 a = [0.2 0.3];
@@ -42,30 +65,19 @@ ee = ee(:);
 ff = ff(:);
 
 ncases = length(aa);
+icase_start = 42;
+icase_end = 43;
 
-icases = [1:20 41:60 81:100 121:140]
-icase_start = 44;
-icase_end = 56;
+icases = [43 57:60 81:100 121:140];
 
-nn = length(icases);
-res_opt_all = zeros(nn,1);
-res_min_all = zeros(nn,1);
+for iii=1:length(icases)
+    icase = icases(iii); 
 
-aause = aa(icases);
-bbuse = bb(icases);
-ccuse = cc(icases);
-dduse = dd(icases);
-eeuse = ee(icases);
-ffuse = ff(icases);
+    % define geometry type
+    % a is a measure of the width
+    % b is a measure of the closing angle
 
-for iii=1:nn
-  icase = icases(iii);
 
-% define geometry type
-% a is a measure of the width
-% b is a measure of the closing angle
-
-    disp(icase);
     binv = bb(icase);
     a = aa(icase);
     b = pi/binv;
@@ -88,7 +100,7 @@ for iii=1:nn
     optim_opts.sd_iter = 30;
 
 
-    % Data and solution directories
+% Data and solution directories
 
 
     fname = [dir_data 'cavity_ik' num2str(k0) '_nk' int2str(nk) '_dk' ...
@@ -115,20 +127,37 @@ for iii=1:nn
      int2str(optim_opts.n_curv_min) '_epscurv' num2str(optim_opts.eps_curv) ...
      '_lscaled.mat'];
 
-    % load(fname)
+    diary(fname_diary);
+    fprintf('a=%d,   binv=%d\n',a,binv);
+    disp(opts);
+    disp(optim_opts);
+ 
+
+    S = load(fname);
+    u_meas = S.u_meas;
+
+
+    % start inverse problem
     try
-      A = load(fname_sol);
+       tic, [inv_data_all,src_info_out] = rla.rla_inverse_solver(u_meas,bc,...
+                          optim_opts,opts); toc;
+
     catch
-      continue
+       diary off
+       fprintf('error in icase %d\n',icase);
+       clear u_meas S fname_diary fname fname_sol
+       clear optim_opts opts b a
+       continue
     end
-%    rla.post_process(A.inv_data_all,fname)
-    inv_tmp = cell2mat(A.inv_data_all);
-    
-    res_opt = vertcat(inv_tmp.res_opt);
-     res_opt_all(iii) = res_opt(end);
-     res_min_all(iii) = min(res_opt(:));
-    clear A inv_tmp res_opt
+    diary off
+    save(fname_sol,'inv_data_all','src_info_out','-v7.3');                     
+    fprintf('\n\n\n\n\n\n\n\n');
+    fprintf('done with icase: %d\n',icase);
+    fprintf('\n\n\n\n\n\n\n\n');
+    clear u_meas S inv_data_all src_info_out fname_diary fname fname_sol
+    clear optim_opts opts b a
 end
+exit                      
 
 
 
